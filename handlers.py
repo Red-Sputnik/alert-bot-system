@@ -16,7 +16,8 @@ async def cmd_start(message: Message, state: FSMContext):
 @user.message(Reg.name)
 async def reg_name(message: Message, state: FSMContext):
     await state.update_data(name=message.text)
-    await message.answer("Теперь отправьте ваш номер телефона!")
+    await message.answer("Теперь отправьте ваш номер телефона!",
+    reply_markup=kb.get_number)
     await state.set_state(Reg.phone)
 
 @user.message(Reg.phone)
