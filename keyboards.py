@@ -24,5 +24,5 @@ get_number = ReplyKeyboardMarkup(
             KeyboardButton(text="Отправить номер телефона", request_contact=True)]
     ],
     resize_keyboard=True,
-    input_field_placeholder="Введите номер телефона"
+    input_field_placeholder="Нажмите кнопку для отправки номера"
 )
