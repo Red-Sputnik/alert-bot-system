@@ -16,7 +16,10 @@ class Database:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     telegram_id INTEGER UNIQUE,
                     name TEXT NOT NULL,
-                    phone TEXT NOT NULL
+                    phone TEXT NOT NULL,
+                    status TEXT,
+                    latitude REAL,
+                    longitude REAL
                 )
             """)
     def add_user(self, telegram_id: int, name: str, phone: str):
@@ -43,3 +46,21 @@ class Database:
                 "SELECT telegram_id FROM users"
             )
             return cursor.fetchall()
+    
+    def update_status(self, telegram_id: int, status: str):
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE users SET status = ? WHERE telegram_id = ?", 
+                (status, telegram_id)
+            )
+
+    def update_location(self, telegram_id: int, latitude: float, longitude: float):
+        with self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE users
+                SET latitude = ?, longitude = ?
+                WHERE telegram_id = ?
+                """,
+                (latitude, longitude, telegram_id)
+            )

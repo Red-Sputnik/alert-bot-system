@@ -1,11 +1,12 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 
 import keyboards as kb
 from states import Reg
 from database import Database
+from config import ADMIN_IDS
 
 db = Database()
 user_router = Router()
@@ -28,29 +29,30 @@ async def send_alert(message:Message):
         await message.answer("⛔ У вас нет прав для отправки оповещений.")
         return
 
-alert_text = (
+    alert_text = (
         "⚠️ ВНИМАНИЕ!\n\n"
         "Зафиксирована чрезвычайная ситуация.\n"
         "Следуйте инструкциям экстренных служб.\n\n"
         "Дополнительная информация будет направлена позже."
     )
 
-users = db.get_all_users()
-sent = 0
+    users = db.get_all_users()
+    sent = 0
 
-for (telegram_id,) in users:
-    try:
-        await message.bot.send_message(
-            chat_id=telegram_id,
-            text=alert_text
-        )
-        sent += 1
-    except Exception:
-        continue
+    for (telegram_id,) in users:
+        try:
+            await message.bot.send_message(
+                chat_id=telegram_id,
+                text=alert_text + "\n\nУкажите ваш статус:",
+                reply_markup=kb.alert_response_kb
+            )
+            sent += 1
+        except Exception:
+            continue
 
-await message.answer(
-    f"✅ Оповещение отправлено.\n"
-    f"Получателей: {sent}"
+    await message.answer(
+        f"✅ Оповещение отправлено.\n"
+        f"Получателей: {sent}"
 )
 
 
@@ -93,24 +95,55 @@ async def process_phone(message: Message, state: FSMContext):
 
     await message.answer(
         "Регистрация завершена.\n\n"
-        "Теперь вы будете получать оповещения в случае ЧС.",
-        reply_markup=ReplyKeyboardRemove()
+        "Пожалуйста, отправьте ваше местоположение.\n"
+        "Это необходимо для оповещения в зоне ЧС.",
+        reply_markup=kb.get_location_kb
     )
 
     await state.clear()
 
-@user_router.callback_query(F.data.startswith("brand_"))
-async def check_brand(callback: CallbackQuery):
-    brand_name = callback.data.split("_", 1)[1]
+@user_router.message(F.location)
+async def process_location(message: Message):
+    location = message.location
 
-    await callback.answer(
-        f"Вы выбрали {brand_name.capitalize()}",
-        show_alert=True
+    db.update_location(
+        telegram_id=message.from_user.id,
+        latitude=location.latitude,
+        longitude=location.longitude
+    )
+    
+    await message.answer(
+        "📍 Геолокация сохранена.\n"
+        "Спасибо! В случае ЧС вы будете оповещены с учётом вашего местоположения.",
+        reply_markup=ReplyKeyboardRemove()
     )
 
-    await callback.message.answer(
-        f"Вы выбрали {brand_name.capitalize()}!"
-    )
+@user_router.callback_query(F.data.startswith("status_"))
+async def handle_status(callback: CallbackQuery):
+    status = callback.data.split("_", 1)[1]
+
+    if status == "safe":
+        db.update_status(
+            telegram_id=callback.from_user.id,
+            status="safe"
+        )
+
+        await callback.answer("Статус сохранён")
+        await callback.message.answer(
+            "✅ Спасибо за ответ.\nОтмечено, что вы в безопасности."
+        )
+
+    elif status == "help":
+        db.update_status(
+            telegram_id=callback.from_user.id,
+            status="help"
+        )
+
+        await callback.answer("Запрос принят")
+        await callback.message.answer(
+            "🆘 Ваш запрос о помощи принят.\n"
+            "Службы экстренного реагирования уведомлены."
+        )
 
 
 @user_router.message()

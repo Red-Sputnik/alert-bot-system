@@ -1,20 +1,19 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
-menu = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="Каталог")],
-        [KeyboardButton(text="Корзина"),
-        KeyboardButton(text="Контакты")],
-    ],
-    resize_keyboard=True,
-    input_field_placeholder="Выберите пункт меню"
-)
-
-catalog = InlineKeyboardMarkup(
+alert_response_kb = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="Nike", callback_data="brand_nike")],
-        [InlineKeyboardButton(text="Adidas", callback_data="brand_adidas")],
-        [InlineKeyboardButton(text="Reebook", callback_data="brand_reebook")],
+        [
+            InlineKeyboardButton(
+                text="✅ Я в безопасности",
+                callback_data="status_safe"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🆘 Нужна помощь",
+                callback_data="status_help"
+            )
+        ]
     ]
 )
 
@@ -25,4 +24,17 @@ get_number = ReplyKeyboardMarkup(
     ],
     resize_keyboard=True,
     input_field_placeholder="Нажмите кнопку для отправки номера"
+)
+
+get_location_kb = ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton(
+                text="📍 Отправить геолокацию",
+                request_location=True
+            )
+        ]
+    ],
+    resize_keyboard=True,
+    input_field_placeholder="Отправьте ваше местоположение"
 )

@@ -1,8 +1,8 @@
 import asyncio
 from aiogram import Bot, Dispatcher
 
-from handlers import user_router
 from config import BOT_TOKEN
+from handlers import user_router
 
 
 async def main():
