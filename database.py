@@ -36,3 +36,10 @@ class Database:
                 (telegram_id,)
             )
             return cursor.fetchone()
+
+    def get_all_users(self) -> list[tuple]:
+        with self._connect() as conn:
+            cursor = conn.execute(
+                "SELECT telegram_id FROM users"
+            )
+            return cursor.fetchall()

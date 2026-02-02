@@ -22,6 +22,37 @@ async def cmd_start(message: Message, state: FSMContext):
 
     await state.set_state(Reg.name)
 
+@user_router.message(Command("alert"))
+async def send_alert(message:Message):
+    if message.from_user.id not in ADMIN_IDS:
+        await message.answer("⛔ У вас нет прав для отправки оповещений.")
+        return
+
+alert_text = (
+        "⚠️ ВНИМАНИЕ!\n\n"
+        "Зафиксирована чрезвычайная ситуация.\n"
+        "Следуйте инструкциям экстренных служб.\n\n"
+        "Дополнительная информация будет направлена позже."
+    )
+
+users = db.get_all_users()
+sent = 0
+
+for (telegram_id,) in users:
+    try:
+        await message.bot.send_message(
+            chat_id=telegram_id,
+            text=alert_text
+        )
+        sent += 1
+    except Exception:
+        continue
+
+await message.answer(
+    f"✅ Оповещение отправлено.\n"
+    f"Получателей: {sent}"
+)
+
 
 @user_router.message(Reg.name)
 async def process_name(message: Message, state: FSMContext):
