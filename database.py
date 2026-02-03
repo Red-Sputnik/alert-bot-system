@@ -17,6 +17,7 @@ class Database:
                     telegram_id INTEGER UNIQUE,
                     name TEXT NOT NULL,
                     phone TEXT NOT NULL,
+                    region TEXT,
                     status TEXT,
                     latitude REAL,
                     longitude REAL
@@ -26,11 +27,15 @@ class Database:
         with self._connect() as conn:
             conn.execute(
                 """
-                INSERT OR REPLACE INTO users (telegram_id, name, phone)
+                INSERT INTO users (telegram_id, name, phone)
                 VALUES (?, ?, ?)
+                ON CONFLICT(telegram_id) DO UPDATE SET
+                    name = excluded.name,
+                    phone = excluded.phone
                 """,
                 (telegram_id, name, phone)
             )
+
 
     def get_user(self, telegram_id: int) -> Optional[tuple]:
         with self._connect() as conn:
@@ -64,3 +69,56 @@ class Database:
                 """,
                 (latitude, longitude, telegram_id)
             )
+
+    def update_region(self, telegram_id: int, region: str):
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE users SET region = ? WHERE telegram_id = ?",
+                (region, telegram_id)
+            )
+
+    def count_users(self) -> int:
+        with self._connect() as conn:
+            cursor = conn.execute("SELECT COUNT(*) FROM users")
+            return cursor.fetchone()[0]
+
+    def count_by_status(self) -> dict:
+        with self._connect() as conn:
+            cursor = conn.execute("""
+            SELECT status, COUNT(*) 
+            FROM users 
+            GROUP BY status
+        """)
+        return {row[0]: row[1] for row in cursor.fetchall()}
+
+    def count_with_location(self) -> int:
+        with self._connect() as conn:
+            cursor = conn.execute("""
+            SELECT COUNT(*) 
+            FROM users 
+            WHERE latitude IS NOT NULL 
+              AND longitude IS NOT NULL
+        """)
+        return cursor.fetchone()[0]
+
+    def user_exists(self, telegram_id: int) -> bool:
+        with self._connect() as conn:
+            cursor = conn.execute(
+                "SELECT 1 FROM users WHERE telegram_id = ?",
+                (telegram_id,)
+            )
+            return cursor.fetchone() is not None
+
+    def get_users_by_regions(self, regions: list[str]) -> list[int]:
+        placeholders = ",".join("?" for _ in regions)
+
+        query = f"""
+            SELECT telegram_id
+            FROM users
+            WHERE region IN ({placeholders})
+        """
+
+        with self._connect() as conn:
+            cursor = conn.execute(query, regions)
+            return [row[0] for row in cursor.fetchall()]
+

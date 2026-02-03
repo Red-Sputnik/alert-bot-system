@@ -7,6 +7,8 @@ import keyboards as kb
 from states import Reg
 from database import Database
 from config import ADMIN_IDS
+from logger import logger
+from regions import REGIONS
 
 db = Database()
 user_router = Router()
@@ -14,6 +16,12 @@ user_router = Router()
 
 @user_router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
+    if db.user_exists(message.from_user.id):
+        await message.answer(
+            "Вы уже зарегистрированы и получаете оповещения."
+        )
+        return
+
     await state.clear()
 
     await message.answer(
@@ -26,8 +34,13 @@ async def cmd_start(message: Message, state: FSMContext):
 @user_router.message(Command("alert"))
 async def send_alert(message:Message):
     if message.from_user.id not in ADMIN_IDS:
-        await message.answer("⛔ У вас нет прав для отправки оповещений.")
-        return
+        logger.warning(
+            f"Попытка несанкционированного оповещения: "
+            f"telegram_id={message.from_user.id}"
+    )
+    await message.answer("⛔ У вас нет прав для отправки оповещений.")
+    return
+
 
     alert_text = (
         "⚠️ ВНИМАНИЕ!\n\n"
@@ -53,7 +66,13 @@ async def send_alert(message:Message):
     await message.answer(
         f"✅ Оповещение отправлено.\n"
         f"Получателей: {sent}"
-)
+    )
+
+    logger.warning(
+        f"Оповещение ЧС отправлено. "
+        f"Инициатор={message.from_user.id}, "
+        f"Получателей={sent}"
+    )
 
 
 @user_router.message(Reg.name)
@@ -93,30 +112,19 @@ async def process_phone(message: Message, state: FSMContext):
         phone=phone
     )
 
-    await message.answer(
-        "Регистрация завершена.\n\n"
-        "Пожалуйста, отправьте ваше местоположение.\n"
-        "Это необходимо для оповещения в зоне ЧС.",
-        reply_markup=kb.get_location_kb
+    logger.info(
+        f"Регистрация пользователя: "
+        f"telegram_id={message.from_user.id}, "
+        f"name={name}, phone={phone}"
     )
+
+    await message.answer(
+        "Регистрация почти завершена.\n\n"
+        "Пожалуйста, выберите субъект Российской Федерации:",
+        reply_markup=kb.regions_keyboard(page=0)
+    )   
 
     await state.clear()
-
-@user_router.message(F.location)
-async def process_location(message: Message):
-    location = message.location
-
-    db.update_location(
-        telegram_id=message.from_user.id,
-        latitude=location.latitude,
-        longitude=location.longitude
-    )
-    
-    await message.answer(
-        "📍 Геолокация сохранена.\n"
-        "Спасибо! В случае ЧС вы будете оповещены с учётом вашего местоположения.",
-        reply_markup=ReplyKeyboardRemove()
-    )
 
 @user_router.callback_query(F.data.startswith("status_"))
 async def handle_status(callback: CallbackQuery):
@@ -145,6 +153,74 @@ async def handle_status(callback: CallbackQuery):
             "Службы экстренного реагирования уведомлены."
         )
 
+    logger.info(
+    f"Статус пользователя: "
+    f"telegram_id={callback.from_user.id}, "
+    f"status={status}"
+    )
+
+@user_router.callback_query(F.data.startswith("region_page:"))
+async def change_region_page(callback: CallbackQuery):
+    page = int(callback.data.split(":")[1])
+
+    await callback.message.edit_reply_markup(
+        reply_markup=kb.regions_keyboard(page)
+    )
+
+    await callback.answer()
+
+@user_router.callback_query(F.data.startswith("region_pick:"))
+async def pick_region(callback: CallbackQuery):
+    code = callback.data.split(":")[1]
+    region = REGIONS.get(code)
+
+    if not region:
+        await callback.answer("Ошибка выбора региона")
+        return
+
+    db.update_region(
+        telegram_id=callback.from_user.id,
+        region=region
+    )
+
+    await callback.answer("Регион сохранён")
+
+    await callback.message.answer(
+        f"📍 Выбран регион: {region}\n"
+        "Теперь вы будете автоматически получать оповещения МЧС.",
+        reply_markup=ReplyKeyboardRemove()
+    )
+
+
+
+
+@user_router.message(Command("stats"))
+async def show_stats(message: Message):
+    if message.from_user.id not in ADMIN_IDS:
+        logger.warning(
+        f"Попытка несанкционированного доступа к статистике: "
+        f"telegram_id={message.from_user.id}"
+        )
+        
+    if message.from_user.id not in ADMIN_IDS:
+        await message.answer("⛔ У вас нет прав для просмотра статистики.")
+        return
+    total = db.count_users()
+    status_data = db.count_by_status()
+    with_location = db.count_with_location()
+
+    safe = status_data.get("safe", 0)
+    help_ = status_data.get("help", 0)
+    no_response = total - safe - help_
+
+    await message.answer(
+        "📊 Статистика системы оповещения:\n\n"
+        f"👥 Всего зарегистрировано: {total}\n"
+        f"✅ В безопасности: {safe}\n"
+        f"🆘 Нужна помощь: {help_}\n"
+        f"❓ Не ответили: {no_response}\n\n"
+        f"📍 Передали геолокацию: {with_location}"
+    )
 
 @user_router.message()
 async def unknown_message(message: Message):
