@@ -6,7 +6,8 @@ from aiogram.fsm.context import FSMContext
 import keyboards as kb
 from states import Reg
 from database import Database
-from config import ADMIN_IDS
+from config import ADMIN_IDS, DEMO_MODE
+from notifier import process_event
 from logger import logger
 from regions import REGIONS
 
@@ -31,6 +32,33 @@ async def cmd_start(message: Message, state: FSMContext):
 
     await state.set_state(Reg.name)
 
+@user_router.message(Command("demo_alert"))
+async def demo_alert(message: Message):
+    if message.from_user.id not in ADMIN_IDS:
+        await message.answer("⛔ Нет прав")
+        return
+
+    if not DEMO_MODE:
+        await message.answer("Демо-режим отключён")
+        return
+
+    demo_event = {
+        "title": "ДЕМО: Экстренное предупреждение МЧС",
+        "link": "https://mchs.gov.ru/",
+        "regions": ["Москва"]
+    }
+
+    await process_event(message.bot, db, demo_event)
+
+    await message.answer(
+        "🧪 Демонстрационное оповещение отправлено"
+    )
+
+@user_router.message(Command("id"))
+async def my_id(message: Message):
+    await message.answer(f"Ваш Telegram ID: {message.from_user.id}")
+
+
 @user_router.message(Command("alert"))
 async def send_alert(message:Message):
     if message.from_user.id not in ADMIN_IDS:
@@ -38,8 +66,8 @@ async def send_alert(message:Message):
             f"Попытка несанкционированного оповещения: "
             f"telegram_id={message.from_user.id}"
     )
-    await message.answer("⛔ У вас нет прав для отправки оповещений.")
-    return
+        await message.answer("⛔ У вас нет прав для отправки оповещений.")
+        return
 
 
     alert_text = (
@@ -159,6 +187,19 @@ async def handle_status(callback: CallbackQuery):
     f"status={status}"
     )
 
+@user_router.message(Command("mystatus"))
+async def my_status(message: Message):
+    user = db.get_user(message.from_user.id)
+    status = user[4] if user else None
+
+    text = {
+        "safe": "✅ Вы отметили, что в безопасности",
+        "help": "🆘 Вы запросили помощь",
+        None: "❓ Статус не задан"
+    }.get(status, "❓ Статус не задан")
+
+    await message.answer(text)
+
 @user_router.callback_query(F.data.startswith("region_page:"))
 async def change_region_page(callback: CallbackQuery):
     page = int(callback.data.split(":")[1])
@@ -190,9 +231,6 @@ async def pick_region(callback: CallbackQuery):
         "Теперь вы будете автоматически получать оповещения МЧС.",
         reply_markup=ReplyKeyboardRemove()
     )
-
-
-
 
 @user_router.message(Command("stats"))
 async def show_stats(message: Message):

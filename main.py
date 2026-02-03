@@ -1,5 +1,6 @@
 import asyncio
 from aiogram import Bot, Dispatcher
+from logger import logger
 
 from handlers import user_router
 from database import Database
@@ -16,5 +17,13 @@ async def main():
 
     asyncio.create_task(rss_monitor(bot, db))
 
+    logger.info("Бот запущен и ожидает сообщения")
+
     await dp.start_polling(bot)
 
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Бот остановлен пользователем")

@@ -7,3 +7,5 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_IDS = {
     689604245
 }
+
+DEMO_MODE = True # False - реальная работа
