@@ -34,9 +34,17 @@ async def process_event(bot: Bot, db: Database, event: dict):
     title = event["title"]
     regions = event["regions"]
     link = event["link"]
+    is_demo = event.get("is_demo", False)
+
+    db.add_alert(
+        title=title,
+        regions=regions,
+        link=link,
+        is_demo=is_demo
+    )
 
     logger.warning(
-        f"Новое предупреждение МЧС: {title} | регионы={regions}"
+        f"Новое предупреждение МЧС: {title} | регионы={regions} | demo={is_demo}"
     )
 
     users = db.get_users_by_regions(regions)

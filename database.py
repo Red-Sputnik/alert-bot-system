@@ -19,10 +19,20 @@ class Database:
                     phone TEXT NOT NULL,
                     region TEXT,
                     status TEXT,
-                    latitude REAL,
-                    longitude REAL
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 )
             """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS alerts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    regions TEXT NOT NULL,
+                    link TEXT,
+                    is_demo INTEGER NOT NULL,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
     def add_user(self, telegram_id: int, name: str, phone: str):
         with self._connect() as conn:
             conn.execute(
@@ -36,6 +46,20 @@ class Database:
                 (telegram_id, name, phone)
             )
 
+    def add_alert(self, title: str, regions: list[str], link: str, is_demo: bool):
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO alerts (title, regions, link, is_demo)
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                title,
+                ", ".join(regions),
+                link,
+                int(is_demo)
+                )
+            )
 
     def get_user(self, telegram_id: int) -> Optional[tuple]:
         with self._connect() as conn:

@@ -1,6 +1,7 @@
 import asyncio
 from aiogram import Bot, Dispatcher
 from logger import logger
+from aiogram import BotCommand
 
 from handlers import user_router
 from database import Database
@@ -13,6 +14,13 @@ async def main():
     dp = Dispatcher()
     db = Database()
 
+    await bot.set_my_commands([
+        BotCommand(command="start", description="Регистрация в системе оповещения"),
+        BotCommand(command="help", description="Справка по работе бота"),
+        BotCommand(command="stats", description="Статистика (администратор)"),
+        BotCommand(command="alert", description="Ручное оповещение (администратор)")
+    ])
+
     dp.include_router(user_router)
 
     asyncio.create_task(rss_monitor(bot, db))
@@ -20,6 +28,7 @@ async def main():
     logger.info("Бот запущен и ожидает сообщения")
 
     await dp.start_polling(bot)
+
 
 
 if __name__ == "__main__":
