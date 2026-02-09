@@ -105,7 +105,7 @@ async def send_alert(message:Message):
         logger.warning(
             f"Попытка несанкционированного оповещения: "
             f"telegram_id={message.from_user.id}"
-    )
+        )
         await message.answer("⛔ У вас нет прав для отправки оповещений.")
         return
 
@@ -229,8 +229,7 @@ async def handle_status(callback: CallbackQuery):
 
 @user_router.message(Command("mystatus"))
 async def my_status(message: Message):
-    user = db.get_user(message.from_user.id)
-    status = user[4] if user else None
+    status = db.get_status(message.from_user.id)
 
     text = {
         "safe": "✅ Вы отметили, что в безопасности",

@@ -19,7 +19,7 @@ class Database:
                     phone TEXT NOT NULL,
                     region TEXT,
                     status TEXT,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
             """)
             conn.execute("""
@@ -114,6 +114,15 @@ class Database:
             GROUP BY status
         """)
         return {row[0]: row[1] for row in cursor.fetchall()}
+
+    def get_status(self, telegram_id: int):
+        with self._connect() as conn:
+            cursor = conn.execute(
+            "SELECT status FROM users WHERE telegram_id = ?",
+            (telegram_id,)
+            )
+            row = cursor.fetchone()
+        return row[0] if row else None
 
     def count_with_location(self) -> int:
         with self._connect() as conn:
