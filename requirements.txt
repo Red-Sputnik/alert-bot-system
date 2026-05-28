@@ -1,2 +1,4 @@
 aiogram
 requests
+aiohttp-socks
+socks
