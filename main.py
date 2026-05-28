@@ -17,6 +17,7 @@ async def main():
     await bot.set_my_commands([
         BotCommand(command="start", description="Регистрация в системе оповещения"),
         BotCommand(command="help", description="Справка по работе бота"),
+        BotCommand(command="my_status", description="Мой статус"),
         BotCommand(command="stats", description="Статистика (администратор)"),
         BotCommand(command="alert", description="Ручное оповещение (администратор)")
     ])

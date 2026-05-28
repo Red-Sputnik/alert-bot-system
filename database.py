@@ -124,16 +124,6 @@ class Database:
             row = cursor.fetchone()
         return row[0] if row else None
 
-    def count_with_location(self) -> int:
-        with self._connect() as conn:
-            cursor = conn.execute("""
-            SELECT COUNT(*) 
-            FROM users 
-            WHERE latitude IS NOT NULL 
-              AND longitude IS NOT NULL
-        """)
-        return cursor.fetchone()[0]
-
     def user_exists(self, telegram_id: int) -> bool:
         with self._connect() as conn:
             cursor = conn.execute(

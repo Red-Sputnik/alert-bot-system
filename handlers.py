@@ -227,7 +227,7 @@ async def handle_status(callback: CallbackQuery):
     f"status={status}"
     )
 
-@user_router.message(Command("mystatus"))
+@user_router.message(Command("my_status"))
 async def my_status(message: Message):
     status = db.get_status(message.from_user.id)
 
@@ -284,7 +284,6 @@ async def show_stats(message: Message):
         return
     total = db.count_users()
     status_data = db.count_by_status()
-    with_location = db.count_with_location()
 
     safe = status_data.get("safe", 0)
     help_ = status_data.get("help", 0)
@@ -296,11 +295,10 @@ async def show_stats(message: Message):
         f"✅ В безопасности: {safe}\n"
         f"🆘 Нужна помощь: {help_}\n"
         f"❓ Не ответили: {no_response}\n\n"
-        f"📍 Передали геолокацию: {with_location}"
     )
 
 @user_router.message()
 async def unknown_message(message: Message):
     await message.answer(
-        "Команда не распознана. Используйте /start."
+        "Команда не распознана. Используйте команду /start."
     )
